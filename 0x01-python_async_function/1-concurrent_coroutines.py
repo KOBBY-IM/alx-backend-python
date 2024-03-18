@@ -3,6 +3,7 @@
 
 import asyncio
 from typing import List
+import typing
 
 wait_random = __import__('0-basic_async_syntax').wait_random
 
