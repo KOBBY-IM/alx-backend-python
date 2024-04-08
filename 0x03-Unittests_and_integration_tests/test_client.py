@@ -79,27 +79,61 @@ class TestGithubOrgClient(unittest.TestCase):
 class TestIntegrationGithubOrgClient(unittest.TestCase):
     """Integration tests for the GithubOrgClient class."""
 
-    def setUp(self):
-        """Set up common test components."""
-        self.client = GithubOrgClient('some_org')
-        self.mock_get_patcher = patch('client.get_json')
-        self.mocked_get_json = self.mock_get_patcher.start()
+    @classmethod
+    def setUpClass(cls):
+        """setUpClass
+        """
+        cls.get_patcher = patch('client.requests.get')
+        cls.mock_get = cls.get_patcher.start()
 
-    def tearDown(self):
-        """Clean up after tests."""
-        self.mock_get_patcher.stop()
+        def side_effect(url, *args, **kwargs):
+            """side_effect
+            """
+            if 'orgs' in url:
+                return Mock(json=lambda: cls.org_payload)
+            elif 'repos' in url:
+                return Mock(json=lambda: cls.repos_payload)
+            else:
+                raise ValueError(f'Unexpected URL called: {url}')
 
-    def test_public_repos_returns_expected_repos_list(self):
-        """Test GithubOrgClient.public_repos returns
-        expected repository list."""
-        self.mocked_get_json.side_effect = [org_payload, repos_payload]
-        self.assertEqual(self.client.public_repos(), expected_repos)
-        self.mocked_get_json.assert_called()
+        cls.mock_get.side_effect = side_effect
 
-    def test_public_repos_with_specific_license_returns_filtered_repos(self):
-        """Test GithubOrgClient.public_repos with a license
-        filter returns correctly filtered repositories."""
-        self.mocked_get_json.side_effect = [org_payload, repos_payload]
-        self.assertEqual(self.client.public_repos(license="apache-2.0"),
-                         apache2_repos)
-        self.mocked_get_json.assert_called()
+    @classmethod
+    def tearDownClass(cls):
+        """tearDownClass
+        """
+        cls.get_patcher.stop()
+
+
+    @parameterized.expand([
+        ("google",),
+        ("abc",),
+    ])
+    def test_public_repos(self):
+        """Test that GithubOrgClient.org returns
+        the correct JSON response.
+        """
+        with patch('client.get_json') as mocked_get_json:
+            mocked_get_json.side_effect = [
+                org_payload,
+                repos_payload,
+            ]
+
+            client = GithubOrgClient('some_org')
+            self.assertEqual(client.public_repos(), expected_repos)
+            mocked_get_json.assert_called()
+
+    def test_public_repos_with_license(self):
+        """Test that GithubOrgClient.public_repos
+        returns the correct JSON response.
+        """
+        with patch('client.get_json') as mocked_get_json:
+            mocked_get_json.side_effect = [
+                org_payload,
+                repos_payload,
+            ]
+
+            client = GithubOrgClient('some_org')
+            self.assertEqual(client.public_repos(license="apache-2.0"),
+                             apache2_repos)
+            mocked_get_json.assert_called()
