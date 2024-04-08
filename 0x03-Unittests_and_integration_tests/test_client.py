@@ -104,7 +104,6 @@ class TestIntegrationGithubOrgClient(unittest.TestCase):
         """
         cls.get_patcher.stop()
 
-
     @parameterized.expand([
         ("google",),
         ("abc",),
